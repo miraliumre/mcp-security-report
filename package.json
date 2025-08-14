@@ -1,0 +1,91 @@
+{
+  "name": "mcp-security-report",
+  "version": "0.0.9",
+  "description": "MCP server for managing application security audit findings and reports",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "mcp-security-report": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/cli.js",
+    "dev": "MCP_SECURITY_REPORT_DIR=$(pwd)/.dev tsx watch src/cli.ts serve",
+    "dev:cli": "tsx src/cli.ts",
+    "serve": "tsx src/cli.ts serve",
+    "serve:prod": "npm run build && node dist/cli.js serve",
+    "start": "node dist/server/index.js",
+    "test": "NODE_ENV=test vitest",
+    "test:coverage": "vitest --coverage",
+    "audit": "npm audit",
+    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "format": "prettier --write src/**/*.{ts,tsx}",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky",
+    "release": "npm version patch && git push --follow-tags"
+  },
+  "keywords": [
+    "mcp",
+    "security",
+    "audit",
+    "pentesting",
+    "vulnerability",
+    "report",
+    "findings"
+  ],
+  "author": "Miralium Research",
+  "license": "Unlicense",
+  "dependencies": {
+    "@commander-js/extra-typings": "^14.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "@types/morgan": "^1.9.10",
+    "ae-cvss-calculator": "^1.0.8",
+    "archiver": "^7.0.1",
+    "commander": "^14.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
+    "morgan": "^1.10.1",
+    "proper-lockfile": "^4.1.2",
+    "sanitize-filename": "^1.6.3",
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/eventsource": "^1.1.15",
+    "@types/express": "^5.0.3",
+    "@types/express-rate-limit": "^5.1.3",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.3.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.1",
+    "@typescript-eslint/parser": "^8.8.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-security": "^3.0.1",
+    "eventsource": "^4.0.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^16.1.5",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}
