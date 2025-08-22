@@ -15,6 +15,17 @@ import {
 } from './utils/pathSanitizer.js';
 import { emergencyWarn } from './utils/emergencyLog.js';
 import { getServerConfig } from './utils/env.js';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Get package.json version
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')
+) as { version: string };
+const version: string = packageJson.version;
 
 // Custom error classes for better error handling
 class CliError extends Error {
@@ -323,7 +334,7 @@ program
   .description(
     'MCP server for managing application security audit findings and reports'
   )
-  .version('1.0.0')
+  .version(version)
   .addHelpText(
     'after',
     `

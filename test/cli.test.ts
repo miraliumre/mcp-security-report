@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { mkdir, rm } from 'fs/promises';
+import { mkdir, rm, readFile } from 'fs/promises';
 import { join } from 'path';
+
+// Read package.json version for test
+const packageJson = JSON.parse(
+  await readFile(join(process.cwd(), 'package.json'), 'utf-8')
+);
+const expectedVersion = packageJson.version;
 
 const execAsync = promisify(exec);
 
@@ -430,7 +436,7 @@ describe('CLI Integration Tests', () => {
     it('should display version', async () => {
       const { stdout } = await execAsync(`node "${cliPath}" --version`);
 
-      expect(stdout).toContain('1.0.0');
+      expect(stdout).toContain(expectedVersion);
     });
 
     it('should display command-specific help', async () => {
