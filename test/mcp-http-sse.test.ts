@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
 import { spawn } from 'child_process';
 import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
@@ -35,16 +43,31 @@ class MCPHttpSseClient {
   private requestId = 0;
   private isConnected = false;
   private connectionTimeout = 30000; // 30 seconds
-  private pendingRequests = new Map<number, { resolve: (value: MCPResponse) => void; reject: (reason?: any) => void }>();
+  private pendingRequests = new Map<
+    number,
+    { resolve: (value: MCPResponse) => void; reject: (reason?: any) => void }
+  >();
 
   constructor(cliPath: string, projectDir: string, port = 3000) {
     this.baseUrl = `http://localhost:${port}`;
-    
+
     // Start the server process
-    this.serverProcess = spawn('node', [cliPath, 'serve', '--verbose', '--project-dir', projectDir, '--port', `${port}`], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, NODE_ENV: 'test' },
-    });
+    this.serverProcess = spawn(
+      'node',
+      [
+        cliPath,
+        'serve',
+        '--verbose',
+        '--project-dir',
+        projectDir,
+        '--port',
+        `${port}`,
+      ],
+      {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, NODE_ENV: 'test' },
+      }
+    );
 
     this.serverProcess.stdout.on('data', (data: Buffer) => {
       const lines = data.toString().split('\n');
@@ -71,13 +94,15 @@ class MCPHttpSseClient {
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Connection timeout - SSE connection never established'));
+        reject(
+          new Error('Connection timeout - SSE connection never established')
+        );
       }, this.connectionTimeout);
 
       console.log('🔌 Connecting to SSE endpoint:', `${this.baseUrl}/sse`);
-      
+
       this.eventSource = new EventSource(`${this.baseUrl}/sse`);
-      
+
       this.eventSource.onopen = () => {
         console.log('✅ SSE connection opened');
       };
@@ -91,7 +116,7 @@ class MCPHttpSseClient {
         try {
           const endpointPath = event.data;
           console.log('🎉 MCP SSE endpoint received:', endpointPath);
-          
+
           // Extract session ID from the endpoint path: /messages?sessionId=xxx
           const sessionIdMatch = endpointPath.match(/sessionId=([^&]+)/);
           if (sessionIdMatch && sessionIdMatch[1]) {
@@ -102,7 +127,9 @@ class MCPHttpSseClient {
             resolve();
           } else {
             clearTimeout(timeout);
-            reject(new Error('Invalid endpoint message - no session ID found'));
+            reject(
+              new Error('Invalid endpoint message - no session ID found')
+            );
           }
         } catch (error) {
           clearTimeout(timeout);
@@ -122,7 +149,7 @@ class MCPHttpSseClient {
     try {
       const message = JSON.parse(data);
       console.log('📋 Parsed SSE message:', message);
-      
+
       // Check if this is a JSON-RPC response
       if (message.jsonrpc === '2.0' && message.id !== undefined) {
         const pendingRequest = this.pendingRequests.get(message.id);
@@ -130,17 +157,22 @@ class MCPHttpSseClient {
           this.pendingRequests.delete(message.id);
           pendingRequest.resolve(message);
         } else {
-          console.log(`⚠️  Received response for unknown request ID: ${message.id}`);
+          console.log(
+            `⚠️  Received response for unknown request ID: ${message.id}`
+          );
         }
       } else {
         console.log('📨 Non-response SSE message:', message);
       }
-    } catch (error) {
+    } catch {
       console.log('📨 Non-JSON SSE message:', data);
     }
   }
 
-  async sendRequest(method: string, params?: Record<string, unknown> | unknown[] | null): Promise<MCPResponse> {
+  async sendRequest(
+    method: string,
+    params?: Record<string, unknown> | unknown[] | null
+  ): Promise<MCPResponse> {
     if (!this.isConnected || !this.sessionId) {
       throw new Error('Client not connected - call connect() first');
     }
@@ -170,23 +202,28 @@ class MCPHttpSseClient {
         reject: (error: any) => {
           clearTimeout(timeout);
           reject(error);
-        }
+        },
       });
     });
 
     // Send the HTTP POST request (response will come via SSE)
-    const httpResponse = await fetch(`${this.baseUrl}/messages?sessionId=${this.sessionId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    const httpResponse = await fetch(
+      `${this.baseUrl}/messages?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      }
+    );
 
     if (!httpResponse.ok) {
       const errorText = await httpResponse.text();
       this.pendingRequests.delete(id);
-      throw new Error(`HTTP ${httpResponse.status}: ${httpResponse.statusText}. Body: ${errorText}`);
+      throw new Error(
+        `HTTP ${httpResponse.status}: ${httpResponse.statusText}. Body: ${errorText}`
+      );
     }
 
     // The HTTP response should be "Accepted" for SSE transport
@@ -201,7 +238,7 @@ class MCPHttpSseClient {
 
   async initialize(): Promise<void> {
     console.log('🚀 Starting MCP initialization');
-    
+
     // Send initialize request
     const initResponse = await this.sendRequest('initialize', {
       protocolVersion: '2024-11-05',
@@ -237,16 +274,16 @@ class MCPHttpSseClient {
 
   async close(): Promise<void> {
     console.log('🔌 Closing client connections');
-    
+
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
     }
-    
+
     if (this.serverProcess) {
       this.serverProcess.kill();
     }
-    
+
     this.isConnected = false;
     this.sessionId = null;
   }
@@ -280,12 +317,12 @@ describe('MCP HTTP/SSE Integration Tests', () => {
     testCounter++;
     testDir = join(tmpBaseDir, `http-sse-test-${testCounter}`);
     await mkdir(testDir, { recursive: true });
-    
+
     client = new MCPHttpSseClient(cliPath, testDir, serverPort);
-    
+
     // Wait for server to start
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     console.log(`🧪 Starting test ${testCounter}`);
   });
 
@@ -297,32 +334,34 @@ describe('MCP HTTP/SSE Integration Tests', () => {
   describe('Connection Establishment', () => {
     it('should establish SSE connection without hanging', async () => {
       console.log('🧪 Testing SSE connection establishment');
-      
+
       // This test specifically addresses the hanging issue
       await expect(client.connect()).resolves.toBeUndefined();
-      
+
       expect(client.isConnectionEstablished()).toBe(true);
       console.log('✅ SSE connection established successfully');
     });
 
     it('should complete MCP initialization handshake', async () => {
       console.log('🧪 Testing MCP initialization handshake');
-      
+
       await client.connect();
       await expect(client.initialize()).resolves.toBeUndefined();
-      
+
       console.log('✅ MCP handshake completed successfully');
     });
 
     it('should receive proper session ID from server', async () => {
       console.log('🧪 Testing session ID assignment');
-      
+
       await client.connect();
-      
+
       expect(client.isConnectionEstablished()).toBe(true);
       // Session ID should be a UUID format
-      expect(client['sessionId']).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-      
+      expect(client['sessionId']).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      );
+
       console.log('✅ Session ID validation passed');
     });
   });
@@ -335,23 +374,23 @@ describe('MCP HTTP/SSE Integration Tests', () => {
 
     it('should list available tools', async () => {
       console.log('🧪 Testing tools/list request');
-      
+
       const response = await client.sendRequest('tools/list');
-      
+
       expect(response.result).toBeDefined();
       expect(response.result!.tools).toBeInstanceOf(Array);
       expect(response.result!.tools!.length).toBeGreaterThan(0);
-      
-      const toolNames = response.result!.tools!.map(tool => tool.name);
+
+      const toolNames = response.result!.tools!.map((tool) => tool.name);
       expect(toolNames).toContain('create-project');
       expect(toolNames).toContain('list-projects');
-      
+
       console.log('✅ Tools list received successfully');
     });
 
     it('should handle tool calls correctly', async () => {
       console.log('🧪 Testing tools/call request');
-      
+
       const response = await client.sendRequest('tools/call', {
         name: 'create-project',
         arguments: {
@@ -363,18 +402,20 @@ describe('MCP HTTP/SSE Integration Tests', () => {
 
       expect(response.result).toBeDefined();
       expect(response.result!.content).toBeInstanceOf(Array);
-      expect(response.result!.content![0].text).toContain('Created project: http-sse-test-project');
-      
+      expect(response.result!.content![0].text).toContain(
+        'Created project: http-sse-test-project'
+      );
+
       console.log('✅ Tool call executed successfully');
     });
 
     it('should handle ping requests', async () => {
       console.log('🧪 Testing ping request');
-      
+
       const response = await client.sendRequest('ping');
-      
+
       expect(response.result).toBeDefined();
-      
+
       console.log('✅ Ping request handled successfully');
     });
   });
@@ -387,18 +428,18 @@ describe('MCP HTTP/SSE Integration Tests', () => {
 
     it('should handle invalid method calls gracefully', async () => {
       console.log('🧪 Testing error handling for invalid methods');
-      
+
       const response = await client.sendRequest('invalid/method');
-      
+
       expect(response.error).toBeDefined();
       expect(response.error!.code).toBe(-32601); // Method not found
-      
+
       console.log('✅ Invalid method handled correctly');
     });
 
     it('should handle invalid tool calls gracefully', async () => {
       console.log('🧪 Testing error handling for invalid tools');
-      
+
       const response = await client.sendRequest('tools/call', {
         name: 'nonexistent-tool',
         arguments: {},
@@ -406,7 +447,7 @@ describe('MCP HTTP/SSE Integration Tests', () => {
 
       expect(response.error).toBeDefined();
       expect(response.error!.message).toContain('not found');
-      
+
       console.log('✅ Invalid tool call handled correctly');
     });
   });
@@ -414,21 +455,25 @@ describe('MCP HTTP/SSE Integration Tests', () => {
   describe('Connection Reliability', () => {
     it('should not hang on rapid connection attempts', async () => {
       console.log('🧪 Testing rapid connection attempts');
-      
+
       // Test multiple rapid connections to ensure no hanging
       const clients: MCPHttpSseClient[] = [];
-      
+
       try {
         for (let i = 0; i < 3; i++) {
-          const testClient = new MCPHttpSseClient(cliPath, testDir, serverPort);
+          const testClient = new MCPHttpSseClient(
+            cliPath,
+            testDir,
+            serverPort
+          );
           clients.push(testClient);
-          
+
           await testClient.connect();
           expect(testClient.isConnectionEstablished()).toBe(true);
-          
+
           console.log(`✅ Client ${i + 1} connected successfully`);
         }
-        
+
         console.log('✅ All rapid connections established successfully');
       } finally {
         // Clean up all test clients
@@ -440,16 +485,16 @@ describe('MCP HTTP/SSE Integration Tests', () => {
 
     it('should handle server restart gracefully', async () => {
       console.log('🧪 Testing server restart handling');
-      
+
       await client.connect();
       await client.initialize();
-      
+
       // Verify initial connection works
       const response1 = await client.sendRequest('tools/list');
       expect(response1.result).toBeDefined();
-      
+
       console.log('✅ Initial connection verified');
-      
+
       // Note: In a real scenario, we would restart the server here
       // For this test, we just verify the connection was working
       expect(client.isConnectionEstablished()).toBe(true);
@@ -458,36 +503,42 @@ describe('MCP HTTP/SSE Integration Tests', () => {
 
   describe('Regression Tests for Connection Hanging Bug', () => {
     it('should not hang when client connects without immediate message sending', async () => {
-      console.log('🧪 Testing connection without immediate messaging (regression test)');
-      
+      console.log(
+        '🧪 Testing connection without immediate messaging (regression test)'
+      );
+
       // This test specifically addresses the original hanging bug
       // where clients would hang at "Establishing connection to the MCP server"
-      
+
       const startTime = Date.now();
       await client.connect();
       const connectionTime = Date.now() - startTime;
-      
+
       // Connection should be established quickly (within 5 seconds)
       expect(connectionTime).toBeLessThan(5000);
       expect(client.isConnectionEstablished()).toBe(true);
-      
+
       // Wait a bit to ensure connection is stable
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Now initialize and verify it works
       await client.initialize();
-      
+
       const response = await client.sendRequest('tools/list');
       expect(response.result).toBeDefined();
-      
-      console.log(`✅ Connection established in ${connectionTime}ms (regression test passed)`);
+
+      console.log(
+        `✅ Connection established in ${connectionTime}ms (regression test passed)`
+      );
     });
 
     it('should send proper MCP initialization sequence', async () => {
-      console.log('🧪 Testing proper MCP initialization sequence (regression test)');
-      
+      console.log(
+        '🧪 Testing proper MCP initialization sequence (regression test)'
+      );
+
       await client.connect();
-      
+
       // Verify server info is returned correctly
       const initResponse = await client.sendRequest('initialize', {
         protocolVersion: '2024-11-05',
@@ -497,10 +548,12 @@ describe('MCP HTTP/SSE Integration Tests', () => {
 
       expect(initResponse.result).toBeDefined();
       expect(initResponse.result!.serverInfo).toBeDefined();
-      expect(initResponse.result!.serverInfo!.name).toBe('mcp-security-report');
+      expect(initResponse.result!.serverInfo!.name).toBe(
+        '@miralium/mcp-security-report'
+      );
       expect(initResponse.result!.protocolVersion).toBeDefined();
       expect(initResponse.result!.capabilities).toBeDefined();
-      
+
       console.log('✅ MCP initialization sequence completed correctly');
     });
   });
