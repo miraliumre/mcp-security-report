@@ -137,7 +137,7 @@ jobs:
           
           ## Installation
           ```bash
-          npm install -g mcp-security-report@${{ github.ref_name }}
+          npm install -g @miralium/mcp-security-report@${{ github.ref_name }}
           ```
         draft: false
         prerelease: false

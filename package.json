@@ -1,5 +1,5 @@
 {
-  "name": "mcp-security-report",
+  "name": "@miralium/mcp-security-report",
   "version": "0.1.0",
   "description": "MCP server for managing application security audit findings and reports",
   "main": "dist/index.js",
@@ -35,6 +35,9 @@
   ],
   "author": "Miralium Research",
   "license": "Unlicense",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
     "@modelcontextprotocol/sdk": "^1.0.1",
