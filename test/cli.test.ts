@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { mkdir, rm } from 'fs/promises';
@@ -14,7 +14,10 @@ describe('CLI Integration Tests', () => {
   beforeEach(async () => {
     tmpBaseDir = join(process.cwd(), '.tmp');
     await mkdir(tmpBaseDir, { recursive: true });
-    testDir = join(tmpBaseDir, `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+    testDir = join(
+      tmpBaseDir,
+      `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    );
     await mkdir(testDir, { recursive: true });
     cliPath = join(process.cwd(), 'dist', 'cli.js');
   });
@@ -28,7 +31,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" project create test-project --client "Test Client" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Created project: test-project');
       expect(stdout).toContain('ID:');
       expect(stdout).toContain('Status: in-progress');
@@ -46,7 +49,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" project list --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('test-project-1');
       expect(stdout).toContain('test-project-2');
       expect(stdout).toContain('Client 1');
@@ -62,7 +65,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" project update test-project --status completed --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Updated project: test-project');
     });
 
@@ -70,7 +73,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" project create webapp-audit --scope "https://example.com" "admin.example.com" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Created project: webapp-audit');
     });
   });
@@ -87,7 +90,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" finding create test-project --title "XSS Vulnerability" --severity High --description "Cross-site scripting found" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Created finding');
       expect(stdout).toContain('XSS Vulnerability');
     });
@@ -104,7 +107,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" finding list test-project --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('XSS Vulnerability');
       expect(stdout).toContain('SQL Injection');
     });
@@ -113,7 +116,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" finding create test-project --title "XSS" --severity High --description "XSS found" --cwe "CWE-79" --cvss "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Created finding');
       expect(stdout).toContain('XSS');
     });
@@ -123,16 +126,16 @@ describe('CLI Integration Tests', () => {
       const createOutput = await execAsync(
         `node "${cliPath}" finding create test-project --title "Test Finding" --severity medium --description "Test" --project-dir "${testDir}"`
       );
-      
+
       // Extract finding ID from output (assuming format includes ID)
       const idMatch = createOutput.stdout.match(/ID: (VULN-\d+)/);
       if (idMatch) {
         const findingId = idMatch[1];
-        
+
         const { stdout } = await execAsync(
           `node "${cliPath}" finding get test-project "${findingId}" --project-dir "${testDir}"`
         );
-        
+
         expect(stdout).toContain('Test Finding');
         expect(stdout).toContain(findingId);
       }
@@ -143,15 +146,15 @@ describe('CLI Integration Tests', () => {
       const createOutput = await execAsync(
         `node "${cliPath}" finding create test-project --title "Original Title" --severity low --description "Original desc" --project-dir "${testDir}"`
       );
-      
+
       const idMatch = createOutput.stdout.match(/ID: (VULN-\d+)/);
       if (idMatch) {
         const findingId = idMatch[1];
-        
+
         const { stdout } = await execAsync(
           `node "${cliPath}" finding update test-project "${findingId}" --title "Updated Title" --severity high --project-dir "${testDir}"`
         );
-        
+
         expect(stdout).toContain('Updated finding');
       }
     });
@@ -161,15 +164,15 @@ describe('CLI Integration Tests', () => {
       const createOutput = await execAsync(
         `node "${cliPath}" finding create test-project --title "To Delete" --severity low --description "Will be deleted" --project-dir "${testDir}"`
       );
-      
+
       const idMatch = createOutput.stdout.match(/ID: (VULN-\d+)/);
       if (idMatch) {
         const findingId = idMatch[1];
-        
+
         const { stdout } = await execAsync(
           `node "${cliPath}" finding delete test-project "${findingId}" --project-dir "${testDir}"`
         );
-        
+
         expect(stdout).toContain('Deleted finding');
       }
     });
@@ -187,7 +190,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" audit create test-project --title "Reconnaissance" --description "Information gathering phase" --methodology "OWASP" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Added audit trail');
       expect(stdout).toContain('Reconnaissance');
     });
@@ -204,7 +207,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" audit list test-project --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Reconnaissance');
       expect(stdout).toContain('Vulnerability Scanning');
     });
@@ -214,15 +217,15 @@ describe('CLI Integration Tests', () => {
       const createOutput = await execAsync(
         `node "${cliPath}" audit create test-project --title "Test Audit" --description "Test audit description" --project-dir "${testDir}"`
       );
-      
+
       const idMatch = createOutput.stdout.match(/ID: (AUD-\d+)/);
       if (idMatch) {
         const auditId = idMatch[1];
-        
+
         const { stdout } = await execAsync(
           `node "${cliPath}" audit get test-project "${auditId}" --project-dir "${testDir}"`
         );
-        
+
         expect(stdout).toContain('Test Audit');
         expect(stdout).toContain(auditId);
       }
@@ -232,7 +235,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" audit create test-project --title "Scanning" --description "Automated scan" --tools "nmap" "nessus" "burp" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Added audit trail');
       expect(stdout).toContain('Scanning');
     });
@@ -250,7 +253,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" executive set test-project --overview "Security assessment completed" --key-findings "3 critical vulnerabilities found" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Executive summary updated');
     });
 
@@ -263,7 +266,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" executive get test-project --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Test overview');
     });
   });
@@ -273,16 +276,19 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" cwe get 79 --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('CWE-79');
-      expect(stdout.includes('Cross-site Scripting') || stdout.includes('Description')).toBe(true);
+      expect(
+        stdout.includes('Cross-site Scripting') ||
+          stdout.includes('Description')
+      ).toBe(true);
     });
 
     it('should get related CWEs via CLI', async () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" cwe related "79,89" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout.includes('CWE') || stdout.includes('related')).toBe(true);
     });
 
@@ -303,7 +309,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" cvss validate "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout.includes('valid') || stdout.includes('score')).toBe(true);
     });
 
@@ -311,7 +317,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" cvss calculate "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout.includes('score') || stdout.includes('valid')).toBe(true);
     });
 
@@ -319,7 +325,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" cvss validate "INVALID_VECTOR" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout.includes('valid') || stdout.includes('error')).toBe(true);
     });
   });
@@ -329,7 +335,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" project create test-project --client "Test Client" --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Created project: test-project');
     });
 
@@ -342,7 +348,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" project list --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('test-project');
     });
   });
@@ -363,7 +369,9 @@ describe('CLI Integration Tests', () => {
       // Create a directory with some non-MCP content
       const nonMcpDir = join(tmpBaseDir, `non-mcp-${Date.now()}`);
       await mkdir(nonMcpDir, { recursive: true });
-      await execAsync(`echo "some content" > "${join(nonMcpDir, 'random-file.txt')}"`);
+      await execAsync(
+        `echo "some content" > "${join(nonMcpDir, 'random-file.txt')}"`
+      );
 
       try {
         await execAsync(
@@ -371,7 +379,9 @@ describe('CLI Integration Tests', () => {
         );
       } catch (error: any) {
         expect(error.code).toBe(1);
-        expect(error.stderr).toContain('is not empty and does not appear to be an MCP Security Report directory');
+        expect(error.stderr).toContain(
+          'is not empty and does not appear to be an MCP Security Report directory'
+        );
       }
 
       // Cleanup
@@ -388,7 +398,7 @@ describe('CLI Integration Tests', () => {
       const { stdout } = await execAsync(
         `node "${cliPath}" project create second-project --project-dir "${testDir}"`
       );
-      
+
       expect(stdout).toContain('Created project: second-project');
     });
 
@@ -412,21 +422,20 @@ describe('CLI Integration Tests', () => {
   describe('Help and Version', () => {
     it('should display help', async () => {
       const { stdout } = await execAsync(`node "${cliPath}" --help`);
-      
+
       expect(stdout).toContain('Usage:');
-      expect(stdout).toContain('UNIX Philosophy');
       expect(stdout).toContain('Quick Start');
     });
 
     it('should display version', async () => {
       const { stdout } = await execAsync(`node "${cliPath}" --version`);
-      
+
       expect(stdout).toContain('1.0.0');
     });
 
     it('should display command-specific help', async () => {
       const { stdout } = await execAsync(`node "${cliPath}" project --help`);
-      
+
       expect(stdout).toContain('Project management operations');
     });
   });

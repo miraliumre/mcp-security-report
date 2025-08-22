@@ -327,11 +327,6 @@ program
   .addHelpText(
     'after',
     `
-UNIX Philosophy:
-  This tool follows UNIX principles - each command does one thing well,
-  commands can be chained with pipes, and all operations available via
-  MCP server are also available via command line.
-
 Quick Start:
   1. Create project:        mcp-security-report project create my-audit
   2. Add finding:           mcp-security-report finding create my-audit
@@ -347,11 +342,10 @@ Environment Variables:
   MCP_SECURITY_REPORT_MAX_REQUEST_SIZE - Max HTTP request size (default: 1mb)
   MCP_SECURITY_REPORT_CACHE_SIZE       - LRU cache size for findings/audit trails (default: 50)
   
-  Logging Variables:
+Logging Variables:
   MCP_SECURITY_REPORT_LOG_LEVEL        - Log level: error, warn, info, debug (default: info)
   MCP_SECURITY_REPORT_LOG_TARGET       - Log target: console, file, both (auto-detected)
-  MCP_SECURITY_REPORT_LOG_DIR          - Custom log directory (default: <project-dir>/.logs)
-`
+  MCP_SECURITY_REPORT_LOG_DIR          - Custom log directory (default: <project-dir>/.logs)`
   );
 
 // Server command
