@@ -1,5 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { spawn, ChildProcess } from 'child_process';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
+import { spawn } from 'child_process';
 import { mkdir, rm, writeFile, access } from 'fs/promises';
 import { join } from 'path';
 import { StorageManager } from '../src/server/storage/index.js';
@@ -28,13 +36,20 @@ describe('Instance Locking Tests', () => {
     testCounter++;
     testDir = join(tmpBaseDir, `instance-lock-test-${testCounter}`);
     await mkdir(testDir, { recursive: true });
-    
+
     // Create .mcp-projects.json to make this a valid MCP directory
-    await writeFile(join(testDir, '.mcp-projects.json'), JSON.stringify({
-      projects: {},
-      lastActive: undefined
-    }, null, 2));
-    
+    await writeFile(
+      join(testDir, '.mcp-projects.json'),
+      JSON.stringify(
+        {
+          projects: {},
+          lastActive: undefined,
+        },
+        null,
+        2
+      )
+    );
+
     nextPort += 10; // Increment port range for each test to avoid conflicts
   });
 
@@ -49,7 +64,7 @@ describe('Instance Locking Tests', () => {
       await storage1.acquireInstanceLock();
 
       const storage2 = new StorageManager(testDir);
-      
+
       await expect(storage2.acquireInstanceLock()).rejects.toThrow(
         /Another MCP Security Report instance is already running/
       );
@@ -94,12 +109,12 @@ describe('Instance Locking Tests', () => {
     it('should handle multiple acquire calls on same instance gracefully', async () => {
       const storage = new StorageManager(testDir);
       await storage.acquireInstanceLock();
-      
+
       // Second acquire on same instance should not fail (idempotent)
       // But proper-lockfile might throw if called twice, so let's test differently
       const storage2 = new StorageManager(testDir);
       await expect(storage2.acquireInstanceLock()).rejects.toThrow();
-      
+
       await storage.releaseInstanceLock();
     });
   });
@@ -110,7 +125,7 @@ describe('Instance Locking Tests', () => {
       await handlers1.acquireInstanceLock();
 
       const handlers2 = new CliHandlers(testDir);
-      
+
       await expect(handlers2.acquireInstanceLock()).rejects.toThrow(
         /Another MCP Security Report instance is already running/
       );
@@ -120,14 +135,16 @@ describe('Instance Locking Tests', () => {
 
     it('should automatically acquire lock when using CLI operations', async () => {
       const handlers1 = new CliHandlers(testDir);
-      
+
       // Acquire lock first
       await handlers1.acquireInstanceLock();
-      
+
       const handlers2 = new CliHandlers(testDir);
-      
+
       // Second handler should fail to acquire lock
-      await expect(handlers2.acquireInstanceLock()).rejects.toThrow(/Another MCP Security Report instance/);
+      await expect(handlers2.acquireInstanceLock()).rejects.toThrow(
+        /Another MCP Security Report instance/
+      );
 
       await handlers1.cleanup();
     });
@@ -139,10 +156,21 @@ describe('Instance Locking Tests', () => {
       const serverPort2 = nextPort++;
 
       // Start first server
-      const server1 = spawn('node', [cliPath, 'serve', '--project-dir', testDir, '--port', `${serverPort1}`], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' },
-      });
+      const server1 = spawn(
+        'node',
+        [
+          cliPath,
+          'serve',
+          '--project-dir',
+          testDir,
+          '--port',
+          `${serverPort1}`,
+        ],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, NODE_ENV: 'test' },
+        }
+      );
 
       // Wait for first server to start
       await new Promise<void>((resolve, reject) => {
@@ -161,23 +189,41 @@ describe('Instance Locking Tests', () => {
         server1.stderr.on('data', (data: Buffer) => {
           const errorText = data.toString();
           console.error('Server 1 stderr:', errorText);
-          if (errorText.includes('Another MCP Security Report instance') || errorText.includes('validation')) {
+          if (
+            errorText.includes('Another MCP Security Report instance') ||
+            errorText.includes('validation')
+          ) {
             clearTimeout(timeout);
-            reject(new Error('Server 1 failed to start due to existing lock or validation error'));
+            reject(
+              new Error(
+                'Server 1 failed to start due to existing lock or validation error'
+              )
+            );
           }
         });
       });
 
       // Try to start second server in same directory
-      const server2 = spawn('node', [cliPath, 'serve', '--project-dir', testDir, '--port', `${serverPort2}`], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' },
-      });
+      const server2 = spawn(
+        'node',
+        [
+          cliPath,
+          'serve',
+          '--project-dir',
+          testDir,
+          '--port',
+          `${serverPort2}`,
+        ],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, NODE_ENV: 'test' },
+        }
+      );
 
       // Second server should fail with lock error
       const server2Error = await new Promise<string>((resolve) => {
         let errorOutput = '';
-        
+
         server2.stderr.on('data', (data: Buffer) => {
           errorOutput += data.toString();
         });
@@ -195,8 +241,12 @@ describe('Instance Locking Tests', () => {
         }, 8000);
       });
 
-      expect(server2Error).toContain('Another MCP Security Report instance is already running');
-      expect(server2Error).toContain('Running multiple instances in the same directory can lead to data corruption');
+      expect(server2Error).toContain(
+        'Another MCP Security Report instance is already running'
+      );
+      expect(server2Error).toContain(
+        'Running multiple instances in the same directory can lead to data corruption'
+      );
       expect(server2Error).toContain('manually remove the lock file');
 
       // Clean up
@@ -208,10 +258,21 @@ describe('Instance Locking Tests', () => {
       const serverPort = nextPort++;
 
       // Start server
-      const server = spawn('node', [cliPath, 'serve', '--project-dir', testDir, '--port', `${serverPort}`], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' },
-      });
+      const server = spawn(
+        'node',
+        [
+          cliPath,
+          'serve',
+          '--project-dir',
+          testDir,
+          '--port',
+          `${serverPort}`,
+        ],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, NODE_ENV: 'test' },
+        }
+      );
 
       // Wait for server to start
       await new Promise<void>((resolve, reject) => {
@@ -238,19 +299,27 @@ describe('Instance Locking Tests', () => {
       });
 
       // Try CLI operation - use list instead of create to avoid parameter issues
-      const cliProcess = spawn('node', [cliPath, 'project', 'list', '--project-dir', testDir], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' },
-      });
+      const cliProcess = spawn(
+        'node',
+        [cliPath, 'project', 'list', '--project-dir', testDir],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, NODE_ENV: 'test' },
+        }
+      );
 
-      const cliResult = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+      const cliResult = await new Promise<{
+        stdout: string;
+        stderr: string;
+        exitCode: number;
+      }>((resolve) => {
         let stdout = '';
         let stderr = '';
-        
+
         cliProcess.stdout.on('data', (data: Buffer) => {
           stdout += data.toString();
         });
-        
+
         cliProcess.stderr.on('data', (data: Buffer) => {
           stderr += data.toString();
         });
@@ -269,7 +338,9 @@ describe('Instance Locking Tests', () => {
       });
 
       expect(cliResult.exitCode).not.toBe(0);
-      expect(cliResult.stderr).toContain('Another MCP Security Report instance is already running');
+      expect(cliResult.stderr).toContain(
+        'Another MCP Security Report instance is already running'
+      );
 
       // Clean up
       server.kill();
@@ -283,16 +354,24 @@ describe('Instance Locking Tests', () => {
       await storage1.acquireInstanceLock();
 
       const storage2 = new StorageManager(testDir);
-      
+
       try {
         await storage2.acquireInstanceLock();
         expect.fail('Should have thrown an error');
       } catch (error) {
         const errorMessage = (error as Error).message;
-        expect(errorMessage).toContain(`Another MCP Security Report instance is already running in ${testDir}`);
-        expect(errorMessage).toContain('Running multiple instances in the same directory can lead to data corruption');
-        expect(errorMessage).toContain('If you are certain no other instance is running, you can manually remove the lock file:');
-        expect(errorMessage).toContain(`rm -r "${join(testDir, '.mcp-instance.lock')}"`);
+        expect(errorMessage).toContain(
+          `Another MCP Security Report instance is already running in ${testDir}`
+        );
+        expect(errorMessage).toContain(
+          'Running multiple instances in the same directory can lead to data corruption'
+        );
+        expect(errorMessage).toContain(
+          'If you are certain no other instance is running, you can manually remove the lock file:'
+        );
+        expect(errorMessage).toContain(
+          `rm -r "${join(testDir, '.mcp-instance.lock')}"`
+        );
       }
 
       await storage1.releaseInstanceLock();
@@ -304,10 +383,21 @@ describe('Instance Locking Tests', () => {
       const lockPath = join(testDir, '.mcp-instance.lock');
 
       // Start a CLI process that creates a project (acquires lock)
-      const cliProcess = spawn('node', [cliPath, 'project', 'create', 'test-project', '--project-dir', testDir], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' },
-      });
+      const cliProcess = spawn(
+        'node',
+        [
+          cliPath,
+          'project',
+          'create',
+          'test-project',
+          '--project-dir',
+          testDir,
+        ],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, NODE_ENV: 'test' },
+        }
+      );
 
       await new Promise<void>((resolve) => {
         cliProcess.on('exit', () => {
@@ -321,10 +411,21 @@ describe('Instance Locking Tests', () => {
 
     it('should allow new instances after previous process exits', async () => {
       // Run first CLI command
-      const cliProcess1 = spawn('node', [cliPath, 'project', 'create', 'test-project-1', '--project-dir', testDir], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' },
-      });
+      const cliProcess1 = spawn(
+        'node',
+        [
+          cliPath,
+          'project',
+          'create',
+          'test-project-1',
+          '--project-dir',
+          testDir,
+        ],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, NODE_ENV: 'test' },
+        }
+      );
 
       await new Promise<void>((resolve) => {
         cliProcess1.on('exit', () => {
@@ -333,12 +434,27 @@ describe('Instance Locking Tests', () => {
       });
 
       // Run second CLI command (should work after first process exits)
-      const cliProcess2 = spawn('node', [cliPath, 'project', 'create', 'test-project-2', '--project-dir', testDir], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' },
-      });
+      const cliProcess2 = spawn(
+        'node',
+        [
+          cliPath,
+          'project',
+          'create',
+          'test-project-2',
+          '--project-dir',
+          testDir,
+        ],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, NODE_ENV: 'test' },
+        }
+      );
 
-      const cliOutput = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+      const cliOutput = await new Promise<{
+        stdout: string;
+        stderr: string;
+        exitCode: number;
+      }>((resolve) => {
         let stdout = '';
         let stderr = '';
 
@@ -356,7 +472,9 @@ describe('Instance Locking Tests', () => {
       });
 
       expect(cliOutput.exitCode).toBe(0);
-      expect(cliOutput.stderr).not.toContain('Another MCP Security Report instance is already running');
+      expect(cliOutput.stderr).not.toContain(
+        'Another MCP Security Report instance is already running'
+      );
     });
   });
 
@@ -373,16 +491,20 @@ describe('Instance Locking Tests', () => {
           await handlers.cleanup();
           results.push({ success: true });
         } catch (error) {
-          results.push({ 
-            success: false, 
-            error: (error as Error).message 
+          results.push({
+            success: false,
+            error: (error as Error).message,
           });
         }
       }
 
       // At least one should succeed, others should fail with lock error
-      const successCount = results.filter(r => r.success).length;
-      const lockErrors = results.filter(r => !r.success && r.error?.includes('Another MCP Security Report instance')).length;
+      const successCount = results.filter((r) => r.success).length;
+      const lockErrors = results.filter(
+        (r) =>
+          !r.success &&
+          r.error?.includes('Another MCP Security Report instance')
+      ).length;
 
       expect(successCount).toBeGreaterThan(0);
       expect(successCount + lockErrors).toBe(attempts);
@@ -391,10 +513,21 @@ describe('Instance Locking Tests', () => {
     it('should properly handle mixed server and CLI access', async () => {
       // Start server first
       const serverPort = nextPort++;
-      const server = spawn('node', [cliPath, 'serve', '--project-dir', testDir, '--port', `${serverPort}`], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' },
-      });
+      const server = spawn(
+        'node',
+        [
+          cliPath,
+          'serve',
+          '--project-dir',
+          testDir,
+          '--port',
+          `${serverPort}`,
+        ],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, NODE_ENV: 'test' },
+        }
+      );
 
       // Wait for server to start and acquire lock
       await new Promise<void>((resolve, reject) => {
@@ -425,42 +558,53 @@ describe('Instance Locking Tests', () => {
       const cliResults: Array<{ success: boolean; error?: string }> = [];
 
       for (let i = 0; i < cliAttempts; i++) {
-        const cliProcess = spawn('node', [cliPath, 'project', 'list', '--project-dir', testDir], {
-          stdio: ['pipe', 'pipe', 'pipe'],
-          env: { ...process.env, NODE_ENV: 'test' },
-        });
+        const cliProcess = spawn(
+          'node',
+          [cliPath, 'project', 'list', '--project-dir', testDir],
+          {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: { ...process.env, NODE_ENV: 'test' },
+          }
+        );
 
-        const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
-          let stderr = '';
+        const result = await new Promise<{ success: boolean; error?: string }>(
+          (resolve) => {
+            let stderr = '';
 
-          cliProcess.stderr.on('data', (data: Buffer) => {
-            stderr += data.toString();
-          });
+            cliProcess.stderr.on('data', (data: Buffer) => {
+              stderr += data.toString();
+            });
 
-          cliProcess.on('exit', (code) => {
-            if (code === 0) {
-              resolve({ success: true });
-            } else {
-              resolve({ success: false, error: stderr });
-            }
-          });
+            cliProcess.on('exit', (code) => {
+              if (code === 0) {
+                resolve({ success: true });
+              } else {
+                resolve({ success: false, error: stderr });
+              }
+            });
 
-          // Add timeout for CLI operations
-          setTimeout(() => {
-            if (cliProcess.exitCode === null) {
-              cliProcess.kill();
-            }
-            resolve({ success: false, error: stderr || 'CLI operation timeout' });
-          }, 5000);
-        });
+            // Add timeout for CLI operations
+            setTimeout(() => {
+              if (cliProcess.exitCode === null) {
+                cliProcess.kill();
+              }
+              resolve({
+                success: false,
+                error: stderr || 'CLI operation timeout',
+              });
+            }, 5000);
+          }
+        );
 
         cliResults.push(result);
       }
 
       // All CLI operations should fail with lock error
-      const allFailed = cliResults.every(r => !r.success);
-      const allHaveLockError = cliResults.every(r => r.error?.includes('Another MCP Security Report instance'));
-      
+      const allFailed = cliResults.every((r) => !r.success);
+      const allHaveLockError = cliResults.every((r) =>
+        r.error?.includes('Another MCP Security Report instance')
+      );
+
       expect(allFailed).toBe(true);
       expect(allHaveLockError).toBe(true);
 
