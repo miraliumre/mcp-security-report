@@ -4,6 +4,7 @@ import {
   ProjectExistsError,
   ProjectNotFoundError,
   FindingNotFoundError,
+  ProjectCompletedError,
 } from '../../types/index.js';
 import type { HandlerFunction } from '../../types/handlers.js';
 import type { JsonRpcRequest } from '../../types/jsonrpc.js';
@@ -133,6 +134,80 @@ describe('MessageRouter JSON-RPC Error Responses', () => {
           message: 'Invalid parameters: Invalid parameters: name is required',
         },
         id: 4,
+      });
+      expect(response.result).toBeUndefined();
+    });
+
+    it('should return JSON-RPC error response for instance lock errors', async () => {
+      const lockError = new Error(
+        'Another MCP Security Report instance is already running in /test/dir.\n' +
+          'Running multiple instances in the same directory can lead to data corruption.\n' +
+          'If you are certain no other instance is running, you can manually remove the lock file:\n' +
+          '  rm -r "/test/dir/.mcp-instance.lock"'
+      );
+      const mockHandler = vi.fn().mockRejectedValue(lockError);
+      mockToolRegistry.set('create-project', mockHandler);
+
+      const request: JsonRpcRequest = {
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: {
+          name: 'create-project',
+          arguments: { name: 'test-project' },
+        },
+        id: 5,
+      };
+
+      const response = await messageRouter.routeMessage(request);
+
+      expect(response).toEqual({
+        jsonrpc: '2.0',
+        error: {
+          code: -32000,
+          message:
+            'Another MCP Security Report instance is already running in /test/dir.\n' +
+            'Running multiple instances in the same directory can lead to data corruption.\n' +
+            'If you are certain no other instance is running, you can manually remove the lock file:\n' +
+            '  rm -r "/test/dir/.mcp-instance.lock"',
+        },
+        id: 5,
+      });
+      expect(response.result).toBeUndefined();
+    });
+
+    it('should return JSON-RPC error response for ProjectCompletedError', async () => {
+      const mockHandler = vi
+        .fn()
+        .mockRejectedValue(
+          new ProjectCompletedError('completed-project', 'add finding')
+        );
+      mockToolRegistry.set('create-finding', mockHandler);
+
+      const request: JsonRpcRequest = {
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: {
+          name: 'create-finding',
+          arguments: {
+            projectName: 'completed-project',
+            title: 'Test Finding',
+            severity: 'High',
+            description: 'Test description',
+          },
+        },
+        id: 6,
+      };
+
+      const response = await messageRouter.routeMessage(request);
+
+      expect(response).toEqual({
+        jsonrpc: '2.0',
+        error: {
+          code: -32000,
+          message:
+            'Cannot add finding on completed project "completed-project". Completed projects are immutable for audit integrity.',
+        },
+        id: 6,
       });
       expect(response.result).toBeUndefined();
     });

@@ -136,10 +136,11 @@ export class MessageRouter {
 
       // Check if the handler returned an error response
       if ('errorCode' in result && result.errorCode) {
-        const errorCode = typeof result.errorCode === 'string' ? result.errorCode : JSON.stringify(result.errorCode);
-        httpLogger.warn(
-          `Tool ${toolName} returned error: ${errorCode}`
-        );
+        const errorCode =
+          typeof result.errorCode === 'string'
+            ? result.errorCode
+            : JSON.stringify(result.errorCode);
+        httpLogger.warn(`Tool ${toolName} returned error: ${errorCode}`);
 
         // Extract error message from content if available
         const errorMessage = result.content?.[0]?.text ?? 'Unknown error';
@@ -190,6 +191,19 @@ export class MessageRouter {
           errorMessage = error.message;
         } else if (error.constructor.name === 'ProjectExistsError') {
           errorCode = -32000; // Server error (custom: resource already exists)
+          errorMessage = error.message;
+        } else if (
+          error.message.includes(
+            'Another MCP Security Report instance is already running'
+          ) ||
+          error.message.includes('already being held') ||
+          error.message.includes('Running multiple instances')
+        ) {
+          errorCode = -32000; // Server error (custom: instance locked)
+          // For lock errors, provide the full descriptive message to help users resolve the issue
+          errorMessage = error.message;
+        } else if (error.constructor.name === 'ProjectCompletedError') {
+          errorCode = -32000; // Server error (custom: project is completed)
           errorMessage = error.message;
         } else if (
           error.name === 'PermissionError' ||
